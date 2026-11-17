@@ -23,7 +23,7 @@ spec:
             - name: PORT
               value: "7000"
             - name: DISABLE_PROFILER
-              value: 1
+              value: "1"
           securityContext:
             readOnlyRootFilesystem: true
             runAsNonRoot: true
