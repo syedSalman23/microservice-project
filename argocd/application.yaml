@@ -1,0 +1,75 @@
+# ==============================================================================
+# ARGO CD APPLICATION MANIFEST (GITOPS CONTINUOUS DELIVERY)
+# ==============================================================================
+# This Kubernetes Custom Resource (CRD) instructs Argo CD to watch your GitHub
+# repository's "k8s/" folder and automatically synchronize all 13 microservices
+# onto your Amazon EKS cluster with zero-downtime rolling updates.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  # Unique name for this application inside the Argo CD dashboard
+  name: onlineboutique
+  # Argo CD Custom Resources must reside in the "argocd" namespace where the controller runs
+  namespace: argocd
+  # Finalizer ensures that if you delete this Application in Argo CD, it cleans up all resources on EKS
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+
+spec:
+  # The Argo CD project this application belongs to ("default" is the standard built-in project)
+  project: default
+
+  # ============================================================================
+  # SOURCE CONFIGURATION (Where your Kubernetes manifests live in Git)
+  # ============================================================================
+  source:
+    # URL to your GitHub repository (replace with your personal fork URL if different)
+    repoURL: 'https://github.com/syedSalman23/microservice-project.git'
+
+    # Git branch or commit to track (HEAD tracks the latest commit on the default branch)
+    targetRevision: HEAD
+
+    # The folder inside the repository containing your 13 Kubernetes manifest files
+    path: k8s
+
+  # ============================================================================
+  # DESTINATION CONFIGURATION (Where to deploy the manifests on your cluster)
+  # ============================================================================
+  destination:
+    # "https://kubernetes.default.svc" refers to the local in-cluster Kubernetes API server
+    server: 'https://kubernetes.default.svc'
+
+    # The Kubernetes namespace where your 12 microservices and Redis will be deployed
+    namespace: default
+
+  # ============================================================================
+  # SYNCHRONIZATION POLICY & SELF-HEALING RULES
+  # ============================================================================
+  syncPolicy:
+    # Automated sync: Argo CD continuously polls Git (every 3 minutes) or reacts to GitHub Webhooks
+    automated:
+      # PRUNE: If you delete a manifest file from k8s/ in Git, Argo CD automatically deletes it from EKS
+      prune: true
+
+      # SELF-HEAL: If someone manually edits or deletes a pod/service using "kubectl",
+      # Argo CD detects the configuration drift and immediately restores the state defined in Git!
+      selfHeal: true
+
+      # Allow empty: Allows sync even if the repository folder becomes temporarily empty
+      allowEmpty: false
+
+    syncOptions:
+      # Automatically create the target namespace if it doesn't exist
+      - CreateNamespace=true
+      # Apply out-of-sync resources only (optimizes performance)
+      - ApplyOutOfSyncOnly=true
+
+    # Retry configuration in case a deployment temporarily fails during a rolling update
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
