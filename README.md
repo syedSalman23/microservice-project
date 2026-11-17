@@ -1,30 +1,125 @@
-# Online Boutique - Cloud-Native Microservices Architecture & AWS DevOps Guide
+# 🛒 Cloud-Native Online Boutique — Enterprise AWS DevOps & GitOps Platform
 
-A production-grade, cloud-native e-commerce microservices platform demonstrating modern distributed systems architecture, polyglot containerization, gRPC inter-service communication, Kubernetes orchestration, GitOps delivery, and enterprise AWS DevOps practices.
+[![AWS](https://img.shields.io/badge/AWS-Amazon_Web_Services-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS_v1.37-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![Terraform](https://img.shields.io/badge/Terraform-Infrastructure_as_Code-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Jenkins](https://img.shields.io/badge/Jenkins-CI_Automation-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
+[![ArgoCD](https://img.shields.io/badge/Argo_CD-GitOps_Continuous_Delivery-EF7B4D?style=for-the-badge&logo=argo&logoColor=white)](https://argo-cd.readthedocs.io/)
+[![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Builds-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Trivy](https://img.shields.io/badge/Security-Trivy_Vulnerability_Scan-1904DA?style=for-the-badge&logo=aquasecurity&logoColor=white)](https://aquasecurity.github.io/trivy/)
+
+A production-grade, enterprise DevOps portfolio project demonstrating the containerization, automated testing, continuous integration, and GitOps continuous delivery of Google Cloud's **Online Boutique** (11 polyglot microservices, Redis in-memory cache, and Locust load generator) onto **Amazon Web Services (AWS)** using **Terraform (IaC)**, **Amazon EKS**, **Amazon ECR**, **Jenkins**, and **Argo CD**.
 
 ---
 
-## 1. Executive Summary & Architectural Overview
+## 📸 Project Showcase & Visual Gallery
 
-**Online Boutique** is a cloud-first e-commerce demo application simulating a real-world digital retail storefront. Users can browse items, view product details, select foreign currencies, add products to a persistent shopping cart, and execute end-to-end checkout transactions.
+> **Tip**: Place your project screenshots into the `screenshots/` directory using the filenames below to render them directly in this README!
+
+| 🛍️ Live Public Storefront | 🔄 Argo CD GitOps Dashboard |
+| :---: | :---: |
+| ![Online Boutique Storefront](screenshots/01-storefront.png)<br><sub>*Public AWS Classic LoadBalancer exposing frontend on port 8080*</sub> | ![Argo CD Visual Topology](screenshots/02-argocd-dashboard.png)<br><sub>*Real-time GitOps synchronization and self-healing state*</sub> |
+
+| ⚙️ Jenkins CI/CD Pipeline | ☸️ Kubernetes Pods on Amazon EKS |
+| :---: | :---: |
+| ![Jenkins Pipeline Stages](screenshots/03-jenkins-pipeline.png)<br><sub>*Monorepo path-aware build, Trivy scan, and GitOps commit*</sub> | ![EKS Pods Status](screenshots/04-eks-pods.png)<br><sub>*All 12 microservices + Redis healthy with 0 restarts*</sub> |
+
+---
+
+## 📋 Table of Contents
+
+1. [Executive Summary & Architecture](#1-executive-summary--architecture)
+2. [Microservices Inventory & Polyglot Stack](#2-microservices-inventory--polyglot-stack)
+3. [Infrastructure as Code (Terraform)](#3-infrastructure-as-code-terraform)
+4. [Continuous Integration (Jenkins CI)](#4-continuous-integration-jenkins-ci)
+5. [GitOps Continuous Delivery (Argo CD)](#5-gitops-continuous-delivery-argo-cd)
+6. [Distributed Checkout Saga & Health Probes](#6-distributed-checkout-saga--health-probes)
+7. [Step-by-Step Deployment & Verification Guide](#7-step-by-step-deployment--verification-guide)
+8. [Safe Zero-Leak Teardown Guide](#8-safe-zero-leak-teardown-guide)
+9. [Engineering Challenges & Real-World Gotchas](#9-engineering-challenges--real-world-gotchas)
+10. [License](#10-license)
+
+---
+
+## 1. Executive Summary & Architecture
+
+The **Online Boutique** simulates a cloud-native digital retail platform. Customers can browse products, change currency exchange rates in real-time, manage persistent shopping carts, and place orders through a multi-service distributed transaction checkout flow.
 
 ### Key Architectural Highlights
-* **Polyglot Microservices**: 11 core microservices + 1 load generator built across 5 programming languages (**Go**, **C# / .NET**, **Node.js**, **Python**, **Java**).
-* **gRPC-First Internal Mesh**: Internal microservices communicate strictly over **gRPC over HTTP/2** with Protocol Buffer serialization ([`protos/demo.proto`](protos/demo.proto)), minimizing latency and network overhead. Only the `frontend` exposes an external HTTP web server.
-* **Stateless Application Tier & Externalized State**: All compute containers are completely stateless and run with non-root security contexts. Shopping cart state is externalized to a **Redis** data store.
-* **Distributed Saga Orchestration**: The `checkoutservice` acts as a centralized workflow coordinator that orchestrates cart validation, currency conversion, payment processing, shipping calculation, and email confirmation.
-* **Graceful Degradation**: Non-critical services (such as `adservice` and `recommendationservice`) degrade gracefully—if either service fails, the `frontend` continues serving product catalog and checkout flows without throwing 500 errors.
-* **Target Enterprise Infrastructure**: Tailored for **Amazon Web Services (AWS)** using **Terraform (IaC)**, **Amazon EKS**, **Amazon ECR**, **Jenkins (CI)**, **Argo CD (GitOps CD)**, and **Prometheus & Grafana (Observability)**.
+* **Polyglot Microservices**: 11 application microservices + 1 load generator written across 5 languages (**Go**, **C# / .NET 10**, **Node.js 24**, **Python 3.14**, **Java 21/25**).
+* **gRPC-First Communication Mesh**: Backend microservices communicate strictly over **gRPC over HTTP/2** using Protocol Buffers (`protos/demo.proto`), minimizing latency. Only `frontend` exposes an external HTTP web server.
+* **Externalized State**: Microservices are completely stateless; shopping cart state is externalized to an in-memory **Redis** cache.
+* **AWS Free Tier Optimized**: The entire stack is engineered to run securely under strict AWS Free Tier constraints (`t3.micro` EC2 instances) utilizing OS-level memory swapping.
+* **Decoupled GitOps Continuous Delivery**: Jenkins never interacts with the Kubernetes cluster directly. Jenkins tests, builds, scans, pushes container images to Amazon ECR, and commits updated tags to Git. Argo CD runs in-cluster, pulls from GitHub, and enforces desired cluster state.
+
+### High-Level Architecture Diagram
+
+```mermaid
+flowchart TD
+    subgraph PublicInternet [Internet & Shoppers]
+        User([Shopper Browser])
+        ELB[AWS Elastic LoadBalancer\n:8080]
+    end
+
+    subgraph AWSVPC [Amazon VPC - 10.0.0.0/16]
+        subgraph PublicSubnets [Public Subnets]
+            NAT[AWS NAT Gateway]
+            JNK[Jenkins CI Runner\nt3.micro + 4GB Swap]
+        end
+
+        subgraph PrivateSubnets [Private Subnets - EKS Cluster]
+            subgraph ArgoCDNamespace [Namespace: argocd]
+                ACD[Argo CD Controller]
+                ARS[Argo CD Repo Server]
+            end
+
+            subgraph DefaultNamespace [Namespace: default]
+                FE[frontend\nGo :8080]
+                CS[cartservice\nC# :7070]
+                RD[(redis-cart\nRedis :6379)]
+                PC[productcatalogservice\nGo :3550]
+                CR[currencyservice\nNode.js :7000]
+                PM[paymentservice\nNode.js :50051]
+                SH[shippingservice\nGo :50051]
+                EM[emailservice\nPython :8080]
+                CK[checkoutservice\nGo :5050]
+                RC[recommendationservice\nPython :8080]
+                AD[adservice\nJava :9555]
+                LG[loadgenerator\nLocust Worker]
+            end
+        end
+    end
+
+    subgraph CloudArtifacts [Cloud Registries & Git]
+        GH[(GitHub Repository\nManifests & Code)]
+        ECR[(Amazon ECR\n13 Private Repositories)]
+    end
+
+    User -->|HTTP :8080| ELB
+    ELB -->|NodePort| FE
+
+    JNK -->|Poll & Commit| GH
+    JNK -->|Push Images| ECR
+
+    ACD -->|Poll & Sync Manifests| GH
+    ACD -->|Reconcile State| DefaultNamespace
+
+    FE -->|gRPC| PC & CR & CS & SH & CK & RC & AD
+    CS -->|TCP :6379| RD
+    CK -->|gRPC| CS & PC & CR & PM & SH & EM
+    RC -->|gRPC| PC
+    LG -.->|Synthetic Load| FE
+```
 
 ---
 
-## 2. Complete Microservices Inventory
+## 2. Microservices Inventory & Polyglot Stack
 
-| # | Microservice | Source Directory | Runtime Language | Exposed Port & Protocol | Downstream Dependencies | Health Probe | Primary Responsibility |
+| # | Microservice | Source Directory | Runtime Language | Port & Protocol | Dependencies | Health Check Probe | Primary Responsibility |
 | :-: | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | **`frontend`** | `src/frontend` | Go 1.25 / 1.27 | `8080` (HTTP) | All 7 core backend services | `httpGet: /_healthz` | Serves HTML web templates, tracks session cookies, and proxies frontend actions to backend gRPC services. |
+| **1** | **`frontend`** | `src/frontend` | Go 1.25 / 1.27 | `8080` (HTTP) | All 7 core backend services | `httpGet: /_healthz` | Serves HTML templates, tracks session cookies, and proxies frontend actions to backend gRPC services. |
 | **2** | **`cartservice`** | `src/cartservice/src` | C# (.NET 10.0) | `7070` (gRPC) | Redis (`:6379`) | `grpc: 7070` | Stores and retrieves user shopping cart items; persists to Redis with distributed in-memory fallback. |
-| **3** | **`productcatalogservice`** | `src/productcatalogservice` | Go 1.25 / 1.27 | `3550` (gRPC) | *None* (reads `products.json`) | `grpc: 3550` | Provides catalog search, listing, and individual product details from a local JSON dataset. |
+| **3** | **`productcatalogservice`** | `src/productcatalogservice` | Go 1.25 / 1.27 | `3550` (gRPC) | *None* | `grpc: 3550` | Provides catalog search, listing, and individual product details from a local JSON dataset. |
 | **4** | **`currencyservice`** | `src/currencyservice` | Node.js 24 | `7000` (gRPC) | *None* | `grpc: 7000` | Converts money amounts across multiple currencies using European Central Bank exchange rates. |
 | **5** | **`paymentservice`** | `src/paymentservice` | Node.js 24 | `50051` (gRPC) | *None* | `grpc: 50051` | Validates credit card formats and generates mock payment transaction authorization UUIDs. |
 | **6** | **`shippingservice`** | `src/shippingservice` | Go 1.26 / 1.27 | `50051` (gRPC) | *None* | `grpc: 50051` | Quotes shipping fees based on item quantities; generates package tracking codes. |
@@ -34,205 +129,94 @@ A production-grade, cloud-native e-commerce microservices platform demonstrating
 | **10** | **`adservice`** | `src/adservice` | Java 21 / 25 | `9555` (gRPC) | *None* | `grpc: 9555` | Serves targeted advertisement banners matched to product category keywords. |
 | **11** | **`redis-cart`** | *Standard Image* | Redis 7 (Alpine) | `6379` (TCP) | *None* | `tcpSocket: 6379` | In-memory key-value database persisting cart items for `cartservice`. |
 | **12** | **`loadgenerator`** | `src/loadgenerator` | Python 3.14 / Locust | *Client Only* | Frontend (`:8080`) | *None (Worker)* | Continuously sends synthetic customer browsing, cart mutation, and checkout requests to the frontend. |
-| **13** | **`shoppingassistantservice`** | `src/shoppingassistantservice` | Python 3.14 / Flask | `8080` (HTTP) | Google Gemini & AlloyDB | `tcpSocket: 8080` | *Optional demo*: AI conversational assistant using multimodal RAG and vector embeddings. |
+| **13** | **`shoppingassistantservice`** | `src/shoppingassistantservice` | Python 3.14 / Flask | `8080` (HTTP) | Google Gemini & AlloyDB | `tcpSocket: 8080` | *Optional GCP Demo*: AI assistant using multimodal RAG (scaled to 0 on AWS). |
 
 ---
 
-## 3. Service Communication Mesh & Architecture Diagram
+## 3. Infrastructure as Code (Terraform)
+
+All AWS cloud infrastructure is fully declared in [`terraform/`](terraform/):
+
+* **Networking (`vpc.tf`)**:
+  * 1 custom VPC (`10.0.0.0/16`) across 2 Availability Zones (`ap-south-1a`, `ap-south-1b`).
+  * 2 Public Subnets (`10.0.0.0/24`, `10.0.1.0/24`) with an Internet Gateway for ALBs and Jenkins.
+  * 2 Private Subnets (`10.0.10.0/24`, `10.0.11.0/24`) with a NAT Gateway for secure worker node egress.
+  * Proper Kubernetes discovery tags: `"kubernetes.io/role/elb" = "1"` and `"kubernetes.io/role/internal-elb" = "1"`.
+* **Container Registry (`ecr.tf`)**:
+  * 13 private Amazon ECR repositories configured with automated vulnerability scan-on-push (`scan_on_push = true`).
+  * Lifecycle policies retaining the last 10 images to prevent unbounded storage costs.
+* **Managed Kubernetes (`eks.tf`)**:
+  * EKS Cluster running Kubernetes v1.37.
+  * AWS IAM roles with OIDC provider integration and least-privilege policies.
+  * Auto Scaling Managed Node Groups running `t3.micro` instances.
+* **CI Runner Server (`jenkins.tf`)**:
+  * Dedicated Ubuntu 22.04 LTS instance with an automated RSA key pair (`jenkins-key.pem`).
+  * Configured with **4 GB Swap Space** on the 30 GB gp3 SSD to bypass 1 GB RAM limits on `t3.micro`.
+  * Pre-installed with Docker, Java 21 OpenJDK, Trivy, Git, and AWS CLI.
+
+---
+
+## 4. Continuous Integration (Jenkins CI)
+
+The automated CI pipeline is declared in [`Jenkinsfile`](Jenkinsfile):
 
 ```mermaid
-flowchart TD
-    subgraph Clients [Clients & Traffic Generation]
-        User([Web Browser])
-        LG[loadgenerator\nLocust Worker]
-    end
-
-    subgraph IngressLayer [Ingress & Presentation]
-        FE[frontend\nGo :8080\nService: LoadBalancer]
-    end
-
-    subgraph CoreDomain [Core Business Domain Services - ClusterIP]
-        AD[adservice\nJava :9555]
-        RC[recommendationservice\nPython :8080]
-        PC[productcatalogservice\nGo :3550]
-        CR[currencyservice\nNode.js :7000]
-        CS[cartservice\nC# :7070]
-        SH[shippingservice\nGo :50051]
-        CK[checkoutservice\nGo :5050]
-        PM[paymentservice\nNode.js :50051]
-        EM[emailservice\nPython :8080]
-    end
-
-    subgraph StateStore [Data Layer]
-        RD[(redis-cart\nRedis :6379\nor AWS ElastiCache)]
-    end
-
-    User -->|HTTP :8080| FE
-    LG -.->|Synthetic HTTP :8080| FE
-
-    FE -->|gRPC :9555| AD
-    FE -->|gRPC :8080| RC
-    FE -->|gRPC :3550| PC
-    FE -->|gRPC :7070| CS
-    FE -->|gRPC :7000| CR
-    FE -->|gRPC :50051| SH
-    FE -->|gRPC :5050| CK
-
-    CS -->|TCP :6379| RD
-    RC -->|gRPC :3550| PC
-
-    CK -->|gRPC :7070| CS
-    CK -->|gRPC :3550| PC
-    CK -->|gRPC :7000| CR
-    CK -->|gRPC :50051| PM
-    CK -->|gRPC :50051| SH
-    CK -->|gRPC :8080| EM
+flowchart LR
+    A[Detect Changed Paths] --> B[Multi-Stage Docker Build]
+    B --> C[Trivy Vulnerability Scan]
+    C --> D[Push Image to Amazon ECR]
+    D --> E[Update k8s/*.yaml Manifests]
+    E --> F[Git Commit & Push to GitHub]
 ```
 
-### Service Discovery Mechanics
-Within the Kubernetes cluster, services discover each other using **CoreDNS**:
-* Environment variables injected into each pod tell the client binary what internal DNS name to call (e.g. `CART_SERVICE_ADDR="cartservice:7070"`).
-* CoreDNS resolves `cartservice` to the stable internal virtual IP of the `cartservice` `ClusterIP` Service, which automatically load-balances across healthy backend Pod replicas.
+### Pipeline Key Capabilities:
+1. **Monorepo Selective Builds**: Inspects `git diff` against `HEAD~1` to rebuild only the microservices whose source code was modified, avoiding redundant builds.
+2. **Security Vulnerability Gating**: Integrates Trivy to scan every compiled container image for critical CVEs before pushing to production registries.
+3. **Automated Manifest Promotion**: Automatically injects the newly pushed ECR image tag into the target Kubernetes manifest (e.g. `sed -i -E s|image: .*/frontend:.*|image: <AWS-ECR-URL>/frontend:build-${BUILD_NUMBER}|g k8s/frontend.yaml`) and commits directly back to GitHub with `[skip ci]`.
 
 ---
 
-## 4. Local Execution with Docker Compose (`compose.yaml`)
+## 5. GitOps Continuous Delivery (Argo CD)
 
-The repository includes a battle-tested [`compose.yaml`](compose.yaml) configured to build and spin up the complete polyglot application locally or on an EC2 instance.
+Continuous Delivery is managed natively inside the EKS cluster using Argo CD ([`argocd/application.yaml`](argocd/application.yaml)):
 
-### Key Docker Compose Engineering Lessons
-1. **The Google Cloud Profiler AWS Crash**:
-   By default, Node.js services (`currencyservice`, `paymentservice`) try to start `@google-cloud/profiler`. On AWS EC2 or local Docker, they cannot reach the Google metadata server and crash with exit code `1`. Setting `DISABLE_PROFILER=1` in their environment fixes this issue.
-2. **Host Port Collisions**:
-   Only `frontend` binds `"8080:8080"` to the host machine. All internal microservices run without host port mapping, communicating cleanly over the private bridge network (`boutique-network`).
-3. **Cart Service Build Context**:
-   The `Dockerfile` for `cartservice` is located in `./src/cartservice/src/Dockerfile`. Its build context must be `./src/cartservice/src`.
-
-### Running the Application with Docker Compose
-
-```bash
-# 1. Start all 12 containers in detached mode
-docker compose up -d
-
-# 2. Check that all containers are healthy and "Up"
-docker ps
-
-# 3. Access the web store in your browser
-# Local machine: http://localhost:8080
-# AWS EC2: http://<EC2-PUBLIC-IP>:8080 (Ensure port 8080 is open in Security Group)
-
-# 4. View real-time logs
-docker compose logs -f frontend
-
-# 5. Stop the application
-docker compose down
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: onlineboutique
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/syedSalman23/microservice-project.git'
+    targetRevision: main
+    path: k8s
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
 ```
+
+### GitOps Superpowers in Action:
+* **Zero-Downtime Rolling Updates**: When Jenkins updates an image tag in Git, Argo CD detects the commit and orchestrates a zero-downtime rolling update on EKS.
+* **Automated Self-Healing (`selfHeal: true`)**: If an administrator or script manually deletes or modifies a Kubernetes resource (such as `kubectl delete svc frontend`), Argo CD immediately detects the configuration drift and recreates the resource within 5 seconds to match Git!
+* **Automated Pruning (`prune: true`)**: If a service manifest is removed from GitHub, Argo CD automatically purges the corresponding resources from the cluster.
 
 ---
 
-## 5. Kubernetes Manifests Architecture (`k8s/`)
+## 6. Distributed Checkout Saga & Health Probes
 
-Every microservice has a dedicated, production-grade Kubernetes manifest inside [`k8s/`](k8s/):
-
-```
-k8s/
-├── adservice.yaml                  # Java gRPC ad service (ClusterIP :9555)
-├── cartservice.yaml                # C# .NET gRPC cart service (ClusterIP :7070)
-├── checkoutservice.yaml            # Go gRPC orchestrator (ClusterIP :5050)
-├── currencyservice.yaml            # Node.js gRPC exchange service (ClusterIP :7000)
-├── emailservice.yaml               # Python gRPC email service (ClusterIP :8080)
-├── frontend.yaml                   # Go HTTP web store (LoadBalancer :8080)
-├── loadgenerator.yaml              # Python Locust client (Deployment only)
-├── paymentservice.yaml             # Node.js gRPC payment service (ClusterIP :50051)
-├── productcatalogservice.yaml      # Go gRPC catalog service (ClusterIP :3550)
-├── recommendationservice.yaml      # Python gRPC recommendation service (ClusterIP :8080)
-├── redis.yaml                      # Redis cache store (ClusterIP :6379)
-├── shippingservice.yaml            # Go gRPC shipping service (ClusterIP :50051)
-└── shoppingassistantservice.yaml   # Python Flask assistant (ClusterIP :8080)
-```
-
-### Critical Kubernetes Design Rules & Gotchas
-
-#### 1. The `/_healthz` Underscore Trap (`frontend.yaml`)
-In [`src/frontend/main.go`](src/frontend/main.go#L161), the HTTP health check route is registered as `/_healthz` with a **leading underscore**:
-```go
-r.HandleFunc(baseUrl+"/_healthz", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "ok") })
-```
-If you configure `path: /healthz` (without the underscore), the Gorilla Mux router treats `"healthz"` as a dynamic product ID (`/product/{id}`), fails to find that product in catalog, and returns an **HTTP 500 error**, sending the pod into `CrashLoopBackOff`. Always use `path: "/_healthz"`.
-
-#### 2. Probe Protocol Alignment
-* **HTTP Services (`frontend`)**: Must use `httpGet: path: "/_healthz", port: 8080`.
-* **gRPC Services (`adservice`, `cartservice`, `checkoutservice`, `currencyservice`, `emailservice`, `paymentservice`, `productcatalogservice`, `recommendationservice`, `shippingservice`)**: Must use native `grpc: port: <PORT>`. Standard HTTP probes will fail against gRPC ports.
-* **TCP Services (`redis-cart`, `shoppingassistantservice`)**: Must use `tcpSocket: port: <PORT>`.
-
-#### 3. The `mustMapEnv` Panic Mechanism (`checkoutservice.yaml` & `frontend.yaml`)
-In Go services, environment variables are read using `mustMapEnv()`:
-```go
-func mustMapEnv(target *string, envKey string) {
-    v := os.Getenv(envKey)
-    if v == "" {
-        panic(fmt.Sprintf("environment variable %q not set", envKey))
-    }
-    *target = v
-}
-```
-If any downstream address is missing from the `env:` block in your Deployment manifest, the Go runtime triggers an immediate fatal panic on boot. All addresses must be explicitly mapped.
-
-#### 4. CoreDNS Service Naming
-* `cartservice` expects Redis at `REDIS_ADDR="redis-cart:6379"`. Therefore, the Redis Service must have `metadata.name: redis-cart` (not `redis`).
-* `frontend` and `checkoutservice` expect `CART_SERVICE_ADDR="cartservice:7070"`. Therefore, the Cart Service must have `metadata.name: cartservice` (not `cartservice-service`).
-
-#### 5. Client vs. Server Workloads (`loadgenerator.yaml`)
-`loadgenerator` only sends traffic *out* to `frontend:8080`. It has no listening server. Therefore:
-* It requires **no Service**.
-* It requires **no ports**.
-* It requires **no health probes**.
-
-#### 6. Container Hardening & Security Contexts
-* `readOnlyRootFilesystem: true` must be defined under `spec.containers[*].securityContext` (container level), not at the Pod level (`spec.securityContext`).
-* Pod level carries `runAsNonRoot: true` and `runAsUser: 1000`.
-
-### Deploying the Kubernetes Manifests
-
-```bash
-# 1. Apply all manifests to your Kubernetes cluster
-kubectl apply -f ./k8s/
-
-# 2. Monitor pod rollout
-kubectl get pods -w
-
-# 3. Check services
-kubectl get svc
-
-# 4. Access the store
-# If using a cloud provider (AWS EKS):
-kubectl get svc frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-# If using local Minikube / Docker Desktop:
-kubectl port-forward deployment/frontend-deployment 8080:8080
-```
-
----
-
-## 6. End-to-End Distributed User Journeys
-
-### Journey 1: Home Page Browsing (`GET /`)
-1. User visits `/`.
-2. `frontend` checks/issues a cookie-based session ID (`shop_session-id`).
-3. Concurrently calls:
-   * `currencyservice.GetSupportedCurrencies()`
-   * `productcatalogservice.ListProducts()`
-   * `cartservice.GetCart(sessionID)`
-   * `adservice.GetAds(["clothing", "accessories"])`
-4. Converts all product prices to user currency via `currencyservice.Convert()`.
-5. Renders HTML server-side and serves browser.
-
-### Journey 2: The Checkout Saga (`POST /cart/checkout`)
-This is the primary distributed transaction in the system managed by `checkoutservice.PlaceOrder()`:
+### The Distributed Checkout Saga (`POST /cart/checkout`)
+The checkout flow demonstrates a distributed transaction saga coordinated by `checkoutservice`:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
+    actor Customer as Shopper
     participant FE as frontend (Go)
     participant CK as checkoutservice (Go)
     participant CS as cartservice (C#)
@@ -242,138 +226,135 @@ sequenceDiagram
     participant PM as paymentservice (Node.js)
     participant EM as emailservice (Python)
 
-    User->>FE: Click "Place Order" (credit card, address)
-    FE->>CK: PlaceOrder(userId, currency, address, email, card)
-
-    rect rgb(240, 248, 255)
-    note right of CK: 1. Cart & Price Aggregation
+    Customer->>FE: Click "Place Order"
+    FE->>CK: PlaceOrder(userId, email, address, creditCard)
     CK->>CS: GetCart(userId)
-    CS-->>CK: cartItems [...]
-    loop For each item
-        CK->>PC: GetProduct(item.productId)
-        PC-->>CK: Product details & USD price
-        CK->>CR: Convert(price_usd, user_currency)
-        CR-->>CK: Localized item price
+    CS-->>CK: cartItems[]
+    loop For each item in cart
+        CK->>PC: GetProduct(itemId)
+        PC-->>CK: productPrice, details
+        CK->>CR: ConvertPrice(USD -> selectedCurrency)
+        CR-->>CK: convertedPrice
     end
-    end
-
-    rect rgb(255, 250, 240)
-    note right of CK: 2. Shipping Quote & Grand Total
-    CK->>SH: GetQuote(address, cartItems)
-    SH-->>CK: shippingCost (USD)
-    CK->>CR: Convert(shippingCost, user_currency)
-    CR-->>CK: Localized shipping price
-    CK->>CK: Total = Sum(items * qty) + shipping
-    end
-
-    rect rgb(240, 255, 240)
-    note right of CK: 3. Payment Authorization
-    CK->>PM: Charge(total, credit_card)
-    PM-->>CK: transaction_id (UUID)
-    end
-
-    rect rgb(255, 240, 245)
-    note right of CK: 4. Fulfillment & Post-Processing
-    CK->>SH: ShipOrder(address, cartItems)
-    SH-->>CK: tracking_id
+    CK->>SH: GetShippingQuote(items, address)
+    SH-->>CK: shippingCostUSD, trackingId
+    CK->>PM: ChargeCard(amount, creditCard)
+    PM-->>CK: transactionUUID
+    CK->>SH: ShipOrder(address, items)
+    SH-->>CK: trackingId
     CK->>CS: EmptyCart(userId)
-    CS-->>CK: Cart cleared
-    CK->>EM: SendOrderConfirmation(email, orderResult)
-    EM-->>CK: Confirmation dispatched
-    end
+    CK->>EM: SendOrderConfirmation(email, orderSummary)
+    CK-->>FE: OrderResult(orderId, trackingId)
+    FE-->>Customer: Display Order Confirmation Page
+```
 
-    CK-->>FE: PlaceOrderResponse { OrderResult }
-    FE-->>User: 200 OK (Order Confirmation Receipt)
+### Kubernetes Health Probing Alignment:
+* **HTTP Workloads (`frontend`)**: Must use `httpGet: path: "/_healthz", port: 8080`.
+* **gRPC Workloads (`checkoutservice`, `cartservice`, etc.)**: Must use native `grpc: port: <PORT>`. Standard HTTP probes will fail against binary gRPC endpoints.
+* **TCP Workloads (`redis-cart`)**: Uses `tcpSocket: port: 6379`.
+* **Client Workloads (`loadgenerator`)**: Locust worker only sends outbound HTTP requests; it exposes no listening ports and requires **zero** probes.
+
+---
+
+## 7. Step-by-Step Deployment & Verification Guide
+
+### Step 1: Provision Infrastructure with Terraform
+```powershell
+cd terraform
+terraform init
+terraform apply -auto-approve
+```
+
+### Step 2: Access Jenkins CI Runner
+1. Adjust permissions on the generated private key:
+   ```powershell
+   icacls.exe .\jenkins-key.pem /inheritance:r
+   icacls.exe .\jenkins-key.pem /grant:r "$($env:USERNAME):(R)"
+   ```
+2. Connect via SSH:
+   ```powershell
+   ssh -i .\jenkins-key.pem ubuntu@<JENKINS-PUBLIC-IP>
+   ```
+3. Open `http://<JENKINS-PUBLIC-IP>:8080` in your browser, configure your pipeline, and run Build!
+
+### Step 3: Install & Access Argo CD
+On the Jenkins terminal:
+```bash
+# Install Argo CD
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Disable unused SSO & notification components to optimize RAM
+kubectl scale deployment argocd-dex-server -n argocd --replicas=0
+kubectl scale deployment argocd-notifications-controller -n argocd --replicas=0
+
+# Expose Argo CD via LoadBalancer
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
+Retrieve admin password:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
+```
+
+### Step 4: Register the GitOps Application
+```bash
+kubectl apply -f https://raw.githubusercontent.com/syedSalman23/microservice-project/main/argocd/application.yaml
+```
+
+### Step 5: Access the Live Storefront
+```bash
+kubectl get svc frontend -n default
+```
+Copy the `EXTERNAL-IP` DNS address and open in browser:
+```text
+http://<FRONTEND-ELB-DNS>:8080
 ```
 
 ---
 
-## 7. AWS Production Architecture Blueprint
+## 8. Safe Zero-Leak Teardown Guide
 
-```
-+--------------------------------------------------------------------------------------------------+
-|                                           AWS Cloud                                              |
-|                                                                                                  |
-|  +--------------------+         +-------------------------------------------------------------+  |
-|  |     Amazon ECR     |         |                     Amazon EKS Cluster                      |  |
-|  |                    |         |                                                             |  |
-|  | 11 Private Repos   | ------> |  +-------------------------------------------------------+  |  |
-|  |                    |         |  |                       Argo CD                         |  |  |
-|  | - frontend:tag     |         |  |          (Watches Git manifests repository            |  |  |
-|  | - checkout:tag     |         |  |           and syncs rolling updates to EKS)           |  |  |
-|  | - [...]            |         |  +--------------------------+----------------------------+  |  |
-|  +--------------------+         |                             |                               |  |
-|           ^                     |                             v                               |  |
-|           | (Docker Push)       |  +-------------------------------------------------------+  |  |
-|  +--------------------+         |  |                 Online Boutique Pods                  |  |  |
-|  |    Jenkins CI      |         |  |          (11 microservices + in-cluster Redis)        |  |  |
-|  |                    |         |  +--------------------------+----------------------------+  |  |
-|  | - Builds Docker    |         |                             |                               |  |
-|  | - Runs Trivy scan  |         |                             v                               |  |
-|  | - Pushes to ECR    |         |  +-------------------------------------------------------+  |  |
-|  | - Commits to Git   |         |  |                 Prometheus & Grafana                  |  |  |
-|  +--------------------+         |  |           (kube-prometheus-stack Operator)            |  |  |
-|           ^                     |  +-------------------------------------------------------+  |  |
-|           | (Merge to main)     |                                                             |  |
-|  +--------------------+         |  +-------------------------------------------------------+  |  |
-|  |   GitHub Actions   |         |  |      AWS Load Balancer Controller (ALB Ingress)       |  |  |
-|  | (PR Lint & Test)   |         |  +-------------------------------------------------------+  |  |
-|  +--------------------+         +-------------------------------------------------------------+  |
-|                                                                                                  |
-|  +------------------------------------------------+    +--------------------------------------+  |
-|  |              Amazon VPC (Multi-AZ)             |    |        Amazon ElastiCache Redis      |  |
-|  |  - Public Subnets (ALB & NAT Gateways)         |    |    (Optional HA production backend   |  |
-|  |  - Private Subnets (EKS Worker Nodes)          |    |     replacing in-cluster Redis)      |  |
-|  +------------------------------------------------+    +--------------------------------------+  |
-+--------------------------------------------------------------------------------------------------+
+To guarantee zero lingering resources and **\$0** AWS billing, execute teardown in this exact order:
+
+```bash
+# 1. On Jenkins: Delete Argo CD first (stops GitOps self-healing)
+kubectl delete namespace argocd
+
+# 2. On Jenkins: Delete the frontend service (tells AWS to remove the ELB)
+kubectl delete svc frontend -n default
+
+# 3. Wait 45s and verify zero external IPs remain:
+kubectl get svc -A
 ```
 
-### 1. Infrastructure via Terraform (`terraform/`)
-* **VPC**: 3 Availability Zones, public subnets for external ALBs and NAT Gateways, private subnets for EKS worker nodes and ElastiCache.
-* **Amazon EKS**: Managed Kubernetes cluster (v1.28+) running managed node groups (`t3.large` or `m5.large`).
-* **Amazon ECR**: 11 private container repositories with vulnerability scanning on push and automated lifecycle rules.
-* **Amazon ElastiCache for Redis** *(Production)*: Multi-AZ Redis replication group providing managed in-memory persistence.
-* **IAM Roles for Service Accounts (IRSA)**: Grants Kubernetes service accounts least-privilege AWS permissions using OIDC federation.
+```powershell
+# 4. In local PowerShell: Force-delete all ECR repos and images
+@("frontend", "cartservice", "productcatalogservice", "currencyservice", "paymentservice", "shippingservice", "emailservice", "checkoutservice", "recommendationservice", "adservice", "redis-cart", "loadgenerator", "shoppingassistantservice") | ForEach-Object {
+    aws ecr delete-repository --repository-name $_ --force --region ap-south-1
+}
 
-### 2. CI/CD Architecture (Jenkins + Argo CD)
-* **GitHub Actions (Fast Developer Feedback)**:
-  * Triggers on Pull Requests.
-  * Runs unit tests (`product_catalog_test.go`, `shippingservice_test.go`), code formatting, and linters.
-* **Jenkins (Build & Artifact Promotion)**:
-  * Triggers on merge to `main`.
-  * Builds multi-stage Docker images.
-  * Runs vulnerability scanning with Trivy.
-  * Authenticates via AWS CLI and pushes tagged images (`${BUILD_NUMBER}-${GIT_COMMIT}`) to Amazon ECR.
-  * Updates the image tags in the Kubernetes manifests repository and commits changes.
-* **Argo CD (GitOps Continuous Delivery)**:
-  * Runs inside the EKS cluster (`argocd` namespace).
-  * Automatically detects updated manifests in Git and initiates zero-downtime rolling deployments on EKS.
-  * Enforces self-healing to eliminate manual configuration drift.
-
-### 3. Observability (Prometheus & Grafana)
-* Deployed using the `kube-prometheus-stack` Helm chart.
-* **Cluster Metrics**: Node Exporter (CPU, RAM, Disk I/O) and `kube-state-metrics` (pod restarts, crash loops).
-* **Application Metrics**: Scraped via `ServiceMonitors` for Go runtime goroutines, JVM garbage collection pauses (`adservice`), and Node.js event loop latency.
-* **RED Metrics**: Request Rate (QPS), Error rates (HTTP 5xx / gRPC status codes), and Request Duration (p50/p95/p99 latency histograms).
+# 5. In local PowerShell: Destroy remaining infrastructure
+cd terraform
+terraform destroy -auto-approve
+```
 
 ---
 
-## 8. Common Gotchas & Troubleshooting Cheat Sheet
+## 9. Engineering Challenges & Real-World Gotchas
 
-| Symptom / Error | Root Cause | Immediate Fix |
-| :--- | :--- | :--- |
-| `no space left on device` during Docker build on EC2 | EBS root volume (8–20 GB default) ran out of disk space during .NET 10 / Java SDK extraction. | Increase EBS volume in AWS Console to 35–40 GB, run `sudo growpart` and `sudo resize2fs`, then run `docker system prune -a --volumes -f`. |
-| `currencyservice` or `paymentservice` in `Exited (1)` | `@google-cloud/profiler` fails outside Google Cloud. | Add `DISABLE_PROFILER: "1"` to their environment variables. |
-| `frontend` returns `500 Internal Server Error` on `_healthz` | Probe path specified as `/healthz` without leading underscore. | Change probe path in `frontend.yaml` to `path: "/_healthz"`. |
-| `frontend` crashes with `panic: environment variable "X" not set` | Missing required downstream service address environment variable. | Ensure all 10 `*_SERVICE_ADDR` variables are defined in `frontend.yaml` (including `SHOPPING_ASSISTANT_SERVICE_ADDR`). |
-| `checkoutservice` crashes with `panic` on startup | Missing one of the 6 fulfillment service addresses. | Add all 6 downstream service addresses to `checkoutservice.yaml`. |
-| `cartservice` fails to resolve Redis | Redis service named `redis` while cart expects `redis-cart:6379`. | Rename Redis service metadata to `name: redis-cart` in `redis.yaml`. |
-| Pod probe fails with `connection reset` or stream error on frontend | Using `grpc:` probe on frontend instead of HTTP. | Change frontend probe to `httpGet: path: "/_healthz", port: 8080`. |
-| Kubernetes rejects `loadgenerator` | Empty ports or probes defined on a client workload. | Remove `Service`, `ports:`, and probes from `loadgenerator.yaml`. |
-| `shoppingassistantservice` crashes with `KeyError: 'PROJECT_ID'` | Requires Google Cloud AlloyDB and Secret Manager credentials. | This service is optional; all core shopping features function 100% without it. |
+| # | Challenge / Error | Root Cause | Engineering Solution |
+| :-: | :--- | :--- | :--- |
+| **1** | `InvalidParameterCombination: Not eligible for Free Tier` | AWS strictly enforces `t3.micro` instance types on student/free-tier accounts. Larger types (`t3.medium`, `t3.large`) are blocked. | Standardized on `t3.micro` for all nodes and configured a **4 GB swap file** on the Jenkins SSD to prevent out-of-memory crashes during builds. |
+| **2** | `0/2 nodes available: Too many pods` | On `t3.micro`, AWS VPC CNI enforces a physical limit of 2 ENIs $\times$ 2 IPs, limiting Kubelet to **4 pods per node** ($2 \times (2 - 1) + 2 = 4$). DaemonSets take 2 slots per node. | Scaled the EKS Node Group to **10 nodes** via AWS CLI, expanding cluster capacity to 40 pods to host all 13 microservices and Argo CD. |
+| **3** | `frontend returns 500 on /healthz` | In `src/frontend/main.go`, the route is registered as `/_healthz` with a leading underscore. Without it, Gorilla Mux treats `healthz` as an invalid product ID. | Configured `httpGet: path: "/_healthz", port: 8080` in `frontend.yaml`. |
+| **4** | `currencyservice rejected during kubectl apply` | Line 26 in `k8s/currencyservice.yaml` had `value: 1` as an unquoted number. Kubernetes requires environment variable values to be strings. | Quoted `value: "1"` in the manifest. |
+| **5** | `shoppingassistantservice in CrashLoopBackOff` | Google Cloud demo service attempting to access GCP Secret Manager and AlloyDB (`os.environ["PROJECT_ID"]`). | Scaled `shoppingassistantservice` to 0 replicas on AWS; all core retail features remain 100% operational. |
+| **6** | `Argo CD recreates frontend on delete` | Enabled `selfHeal: true` in Argo CD Application CRD. Argo CD detected manual deletion as configuration drift from Git. | Recognized as standard GitOps behavior. Deleted the `argocd` namespace first before deleting the service for teardown. |
 
 ---
 
-## 9. License
+## 10. License
 
 This project is licensed under the [Apache 2.0 License](LICENSE).
+Codebase origin: [Google Cloud Platform Microservices Demo](https://github.com/GoogleCloudPlatform/microservices-demo).

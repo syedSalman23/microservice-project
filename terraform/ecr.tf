@@ -9,9 +9,10 @@ locals {
 }
 
 resource "aws_ecr_repository" "k8s-repositories" {
-  for_each = toset(local.repo_names)
+  for_each             = toset(local.repo_names)
   name                 = each.key
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
   image_scanning_configuration {
     scan_on_push = true
   }
