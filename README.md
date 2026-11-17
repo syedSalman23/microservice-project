@@ -354,7 +354,3 @@ terraform destroy -auto-approve
 
 ---
 
-## 10. License
-
-This project is licensed under the [Apache 2.0 License](LICENSE).
-Codebase origin: [Google Cloud Platform Microservices Demo](https://github.com/GoogleCloudPlatform/microservices-demo).
