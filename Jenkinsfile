@@ -262,7 +262,7 @@ pipeline {
                     // (Ensure your GitHub Personal Access Token is saved in Jenkins as 'github-credentials')
                     withCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
-                            git push https://\${GIT_USER}:\${GIT_PASS}@github.com/syedSalman23/microservice-project.git HEAD:\${env.BRANCH_NAME ?: 'dev'}
+                            git push https://\${GIT_USER}:\${GIT_PASS}@github.com/syedSalman23/microservice-project.git HEAD:\${env.BRANCH_NAME ?: 'main'}
                         """
                     }
 
