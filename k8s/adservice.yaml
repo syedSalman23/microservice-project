@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: adservice-container
-          image: gcr.io/google-samples/microservices-demo/adservice:0.4.3
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/adservice:build-4
           ports:
             - containerPort: 9555
             

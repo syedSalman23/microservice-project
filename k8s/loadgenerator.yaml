@@ -20,7 +20,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: loadgenerator-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/loadgenerator:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/loadgenerator:build-4
           env:
             - name: FRONTEND_ADDR
               value: "frontend:8080"

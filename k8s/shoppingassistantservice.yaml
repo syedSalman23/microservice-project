@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: shoppingassistantservice-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/shoppingassistantservice:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/shoppingassistantservice:build-4
           ports:
             - containerPort: 8080
           env:

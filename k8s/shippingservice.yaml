@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: shippingservice-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/shippingservice:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/shippingservice:build-4
           ports:
             - containerPort: 50051
           env:

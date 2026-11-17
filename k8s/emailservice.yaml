@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: emailservice-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/emailservice:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/emailservice:build-4
           ports:
             - containerPort: 8080
           env:

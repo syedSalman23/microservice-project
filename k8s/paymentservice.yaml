@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: paymentservice-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/paymentservice:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/paymentservice:build-4
           ports:
             - containerPort: 50051
           env:

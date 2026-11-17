@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: productcatalogservice-container
-          image: us-central1-docker.pkg.dev/online-boutique-ci/microservices-demo/productcatalogservice:v0.10.7
+          image: 859142233196.dkr.ecr.ap-south-1.amazonaws.com/productcatalogservice:build-4
           ports:
             - containerPort: 3550
           env:
