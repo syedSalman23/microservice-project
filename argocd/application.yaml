@@ -28,8 +28,8 @@ spec:
     # URL to your GitHub repository (replace with your personal fork URL if different)
     repoURL: 'https://github.com/syedSalman23/microservice-project.git'
 
-    # Git branch or commit to track (HEAD tracks the latest commit on the default branch)
-    targetRevision: HEAD
+    # Git branch or commit to track (tracks the main branch)
+    targetRevision: main
 
     # The folder inside the repository containing your 13 Kubernetes manifest files
     path: k8s
