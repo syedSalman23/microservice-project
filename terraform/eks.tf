@@ -52,8 +52,12 @@ resource "aws_eks_cluster" "micro_eks" {
   # The ARN of the IAM role created above for the control plane
   role_arn = aws_iam_role.eks_cluster_role.arn
 
-  # The Kubernetes version to deploy (1.37 is current stable LTS)
+  # The Kubernetes version matching the already-created cluster
   version  = "1.37"
+
+  lifecycle {
+    ignore_changes = [version]
+  }
 
   # VPC and Subnet configuration for the cluster control plane
   vpc_config {
@@ -67,6 +71,12 @@ resource "aws_eks_cluster" "micro_eks" {
 
     # Enable public API endpoint (allows kubectl access from your laptop or Jenkins)
     endpoint_public_access  = true
+  }
+
+  # Grants the IAM creator admin permissions in EKS and enables AWS Console Access Entries
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
   }
 
   # Ensure the IAM policy is fully attached before AWS tries to create the cluster
@@ -153,10 +163,8 @@ resource "aws_eks_node_group" "micro_nodes" {
   # We place worker nodes strictly in PRIVATE subnets for security
   subnet_ids      = aws_subnet.k8s-pri-sub[*].id
 
-  # EC2 instance sizing
-  # t3.large (2 vCPU, 8 GB RAM) is recommended because 12 microservices + redis + monitoring
-  # require at least 8-16 GB total cluster memory and enough ENI IPs for ~25-30 total pods
-  instance_types  = ["t3.large"]
+  # EC2 instance sizing: Free Tier eligible instance type
+  instance_types  = ["t3.micro"]
 
   # Pricing model: ON_DEMAND for stability (or SPOT for 70% cost savings in testing)
   capacity_type   = "ON_DEMAND"

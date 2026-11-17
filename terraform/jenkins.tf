@@ -157,8 +157,8 @@ resource "aws_instance" "jenkins_server" {
   # Ubuntu 22.04 LTS AMI discovered dynamically
   ami                         = data.aws_ami.ubuntu.id
 
-  # Sized at t3.medium (2 vCPU, 4 GB RAM)
-  instance_type               = "t3.medium"
+  # Free Tier eligible instance type
+  instance_type               = "t3.micro"
 
   # Launch inside the first PUBLIC subnet so we can reach the Web UI on port 8080 and SSH
   subnet_id                   = aws_subnet.k8s-pub-sub[0].id
@@ -190,15 +190,32 @@ resource "aws_instance" "jenkins_server" {
               #!/bin/bash
               set -e
 
-              # 1. Update OS packages and install prerequisites
-              apt-get update -y
-              apt-get install -y openjdk-17-jdk git curl unzip wget apt-transport-https gnupg lsb-release
+              # 0. Configure 4 GB Swap space on the 30 GB SSD
+              # This expands the 1 GB physical RAM of t2.micro to 5 GB virtual memory!
+              fallocate -l 4G /swapfile
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
-              # 2. Add Jenkins official repository and install Jenkins
-              wget -O /usr/share/keyrings/jenkins-keyring.asc https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+              # 1. Update OS packages and install prerequisites (Java 21 required by modern Jenkins)
+              apt-get update -y
+              apt-get install -y openjdk-21-jdk git curl unzip wget apt-transport-https gnupg lsb-release
+
+              # 2. Add Jenkins official repository key and install Jenkins
+              curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
               echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/" > /etc/apt/sources.list.d/jenkins.list
+              apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 7198F4B714ABFC68 2>/dev/null || true
               apt-get update -y
               apt-get install -y jenkins
+
+              # Configure Jenkins JVM memory limit to 512MB so it fits cleanly in memory
+              mkdir -p /etc/systemd/system/jenkins.service.d/
+              cat <<'JE' > /etc/systemd/system/jenkins.service.d/override.conf
+              [Service]
+              Environment="JAVA_OPTS=-Xmx512m -Djava.awt.headless=true"
+              JE
+              systemctl daemon-reload
 
               # Enable and start Jenkins system service
               systemctl enable jenkins
